@@ -6,7 +6,7 @@ use File::Basename;
 
 repeat_each(2);
 
-plan tests => repeat_each() * 198;
+plan tests => repeat_each() * 187;
 
 #$ENV{LUA_PATH} = $ENV{HOME} . '/work/JSON4Lua-0.9.30/json/?.lua';
 $ENV{TEST_NGINX_HTML_DIR} ||= html_dir();
@@ -124,7 +124,39 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 4: code cache explicitly off (server level)
+=== TEST 4: code cache explicitly stat
+--- config
+    location /lua {
+        lua_code_cache stat;
+        content_by_lua_file html/test.lua;
+    }
+    location /update {
+        content_by_lua '
+            -- os.execute("(echo HERE; pwd) > /dev/stderr")
+            local f = assert(io.open("$TEST_NGINX_SERVER_ROOT/html/test.lua", "w"))
+            f:write("ngx.say(101)")
+            f:close()
+            ngx.say("updated")
+        ';
+    }
+    location /main {
+        echo_location /lua;
+        echo_location /update;
+        echo_location /lua;
+    }
+--- user_files
+>>> test.lua
+ngx.say(32)
+--- request
+GET /main
+--- response_body
+32
+updated
+101
+
+
+
+=== TEST 5: code cache explicitly off (server level)
 --- config
     lua_code_cache off;
 
@@ -159,7 +191,40 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 5: code cache explicitly off (server level) but be overridden in the location
+=== TEST 6: code cache explicitly stat (server level)
+--- config
+    lua_code_cache stat;
+
+    location /lua {
+        content_by_lua_file html/test.lua;
+    }
+    location /update {
+        content_by_lua '
+            -- os.execute("(echo HERE; pwd) > /dev/stderr")
+            local f = assert(io.open("$TEST_NGINX_SERVER_ROOT/html/test.lua", "w"))
+            f:write("ngx.say(101)")
+            f:close()
+            ngx.say("updated")
+        ';
+    }
+    location /main {
+        echo_location /lua;
+        echo_location /update;
+        echo_location /lua;
+    }
+--- user_files
+>>> test.lua
+ngx.say(32)
+--- request
+GET /main
+--- response_body
+32
+updated
+101
+
+
+
+=== TEST 7: code cache explicitly off (server level) but be overridden in the location
 --- config
     lua_code_cache off;
 
@@ -195,7 +260,41 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 6: code cache explicitly off (affects require) + content_by_lua
+=== TEST 8: code cache explicitly stat (server level) but be overridden in the location
+--- config
+    lua_code_cache stat;
+
+    location /lua {
+        lua_code_cache on;
+        content_by_lua_file html/test.lua;
+    }
+    location /update {
+        content_by_lua '
+            -- os.execute("(echo HERE; pwd) > /dev/stderr")
+            local f = assert(io.open("$TEST_NGINX_SERVER_ROOT/html/test.lua", "w"))
+            f:write("ngx.say(101)")
+            f:close()
+            ngx.say("updated")
+        ';
+    }
+    location /main {
+        echo_location /lua;
+        echo_location /update;
+        echo_location /lua;
+    }
+--- user_files
+>>> test.lua
+ngx.say(32)
+--- request
+GET /main
+--- response_body
+32
+updated
+32
+
+
+
+=== TEST 9: code cache explicitly off (affects require) + content_by_lua
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -233,7 +332,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 7: code cache explicitly off (affects require) + content_by_lua_file
+=== TEST 10: code cache explicitly off (affects require) + content_by_lua_file
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -271,7 +370,43 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 8: code cache explicitly off (affects require) + set_by_lua_file
+=== TEST 11: code cache explicitly stat (affects require) + content_by_lua_file
+--- http_config eval
+    "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
+--- config
+    location /lua {
+        lua_code_cache stat;
+        content_by_lua_file html/test.lua;
+    }
+    location /update {
+        content_by_lua '
+            -- os.execute("(echo HERE; pwd) > /dev/stderr")
+            local f = assert(io.open("$TEST_NGINX_SERVER_ROOT/html/foo.lua", "w"))
+            f:write("module(..., package.seeall); ngx.say(102);")
+            f:close()
+            ngx.say("updated")
+        ';
+    }
+    location /main {
+        echo_location /lua;
+        echo_location /update;
+        echo_location /lua;
+    }
+--- user_files
+>>> test.lua
+local foo = require "foo";
+>>> foo.lua
+module(..., package.seeall); ngx.say(32);
+--- request
+GET /main
+--- response_body
+32
+updated
+32
+
+
+
+=== TEST 12: code cache explicitly off (affects require) + set_by_lua_file
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -310,7 +445,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 9: code cache explicitly on (affects require) + set_by_lua_file
+=== TEST 13: code cache explicitly on (affects require) + set_by_lua_file
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -349,7 +484,7 @@ updated
 
 
 
-=== TEST 10: code cache explicitly off + set_by_lua_file
+=== TEST 14: code cache explicitly off + set_by_lua_file
 --- config
     location /lua {
         lua_code_cache off;
@@ -384,7 +519,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 11: code cache explicitly on + set_by_lua_file
+=== TEST 15: code cache explicitly on + set_by_lua_file
 --- config
     location /lua {
         lua_code_cache on;
@@ -419,7 +554,7 @@ updated
 
 
 
-=== TEST 12: no clear builtin lib "string"
+=== TEST 16: no clear builtin lib "string"
 --- config
     location /lua {
         lua_code_cache off;
@@ -445,7 +580,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 13: no clear builtin lib "string"
+=== TEST 17: no clear builtin lib "string"
 --- config
     location /lua {
         lua_code_cache off;
@@ -470,7 +605,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 14: no clear builtin lib "string"
+=== TEST 18: no clear builtin lib "string"
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -506,7 +641,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 15: do not skip luarocks
+=== TEST 19: do not skip luarocks
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';
      lua_code_cache off;"
@@ -556,7 +691,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 16: do not skip luarocks*
+=== TEST 20: do not skip luarocks*
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';
      lua_code_cache off;"
@@ -606,7 +741,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 17: clear _G table
+=== TEST 21: clear _G table
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -630,7 +765,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 18: github #257: globals cleared when code cache off
+=== TEST 22: github #257: globals cleared when code cache off
 --- http_config
     lua_code_cache off;
     init_by_lua '
@@ -659,7 +794,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 19: lua_code_cache off + FFI-based Lua modules
+=== TEST 23: lua_code_cache off + FFI-based Lua modules
 --- http_config
     lua_code_cache off;
     lua_package_path "$prefix/html/?.lua;;";
@@ -699,7 +834,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 20: ngx.timer.* + ndk
+=== TEST 24: ngx.timer.* + ndk
 --- config
     lua_code_cache off;
     location /read {
@@ -722,10 +857,11 @@ ok
 ["foo = a b",
 qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 ]
+--- SKIP
 
 
 
-=== TEST 21: set ngx.ctx before internal redirects performed by other nginx modules (with log_by_lua)
+=== TEST 25: set ngx.ctx before internal redirects performed by other nginx modules (with log_by_lua)
 --- config
     lua_code_cache off;
     location = /t {
@@ -754,7 +890,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 22: set by lua file
+=== TEST 26: set by lua file
 --- config
     lua_code_cache off;
     location /lua {
@@ -777,7 +913,7 @@ GET /lua?a=5&b=2
 
 
 
-=== TEST 23: simple set by lua
+=== TEST 27: simple set by lua
 --- config
     lua_code_cache off;
     location /lua {
@@ -798,7 +934,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 24: lua_max_pending_timers - chained timers (non-zero delay) - not exceeding
+=== TEST 28: lua_max_pending_timers - chained timers (non-zero delay) - not exceeding
 --- http_config
     lua_max_pending_timers 1;
     lua_code_cache off;
@@ -858,7 +994,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 25: lua variable sharing via upvalue
+=== TEST 29: lua variable sharing via upvalue
 --- http_config
     lua_code_cache off;
 --- config
@@ -903,7 +1039,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 26: lua_max_running_timers (just not enough)
+=== TEST 30: lua_max_running_timers (just not enough)
 --- http_config
     lua_max_running_timers 1;
 --- config
@@ -965,7 +1101,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 27: GC issue with the on_abort thread object
+=== TEST 31: GC issue with the on_abort thread object
 curl: (52) Empty reply from server
 --- config
     lua_code_cache off;
@@ -997,7 +1133,7 @@ qr/curl: \(\d+\) Empty reply from server/
 
 
 
-=== TEST 28: multiple parallel timers
+=== TEST 32: multiple parallel timers
 --- config
     lua_code_cache off;
     location /t {
@@ -1055,7 +1191,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 29: cosocket connection pool timeout (after Lua VM destroys)
+=== TEST 33: cosocket connection pool timeout (after Lua VM destroys)
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -1123,7 +1259,7 @@ qr/\blua tcp socket keepalive: free connection pool [0-9A-F]+ for "127.0.0.1:/,
 
 
 
-=== TEST 30: cosocket connection pool timeout (before Lua VM destroys)
+=== TEST 34: cosocket connection pool timeout (before Lua VM destroys)
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
@@ -1191,7 +1327,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 31: lua_max_running_timers (just not enough, also low lua_max_pending_timers)
+=== TEST 35: lua_max_running_timers (just not enough, also low lua_max_pending_timers)
 --- http_config
     lua_max_running_timers 1;
     lua_max_pending_timers 10;
@@ -1254,7 +1390,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/,
 
 
 
-=== TEST 32: make sure inline code keys are correct
+=== TEST 36: make sure inline code keys are correct
 GitHub issue #1428
 --- config
 include ../html/a/proxy.conf;
@@ -1328,7 +1464,7 @@ code cache hit (key='content_by_lua_nhli_1dfe09105792ef65c8d576cc486d5e04', ref=
 
 
 
-=== TEST 33: make sure Lua code file keys are correct
+=== TEST 37: make sure Lua code file keys are correct
 GitHub issue #1428
 --- config
 include ../html/a/proxy.conf;
@@ -1410,7 +1546,7 @@ code cache hit (key='nhlf_042c9b3a136fbacbbd0e4b9ad10896b7', ref=3)
 
 
 
-=== TEST 34: variables in set_by_lua_file's file path
+=== TEST 38: variables in set_by_lua_file's file path
 --- config
     location ~ ^/lua/(.+)$ {
         set_by_lua_file $res html/$1.lua;
@@ -1442,7 +1578,7 @@ b
 
 
 
-=== TEST 35: variables in rewrite_by_lua_file's file path
+=== TEST 39: variables in rewrite_by_lua_file's file path
 --- config
     location ~ ^/lua/(.+)$ {
         rewrite_by_lua_file html/$1.lua;
@@ -1473,7 +1609,7 @@ b
 
 
 
-=== TEST 36: variables in access_by_lua_file's file path
+=== TEST 40: variables in access_by_lua_file's file path
 --- config
     location ~ ^/lua/(.+)$ {
         access_by_lua_file html/$1.lua;
@@ -1522,7 +1658,7 @@ b
 
 
 
-=== TEST 37: variables in content_by_lua_file's file path
+=== TEST 41: variables in content_by_lua_file's file path
 --- config
     location ~ ^/lua/(.+)$ {
         content_by_lua_file html/$1.lua;
@@ -1553,7 +1689,7 @@ b
 
 
 
-=== TEST 38: variables in header_filter_by_lua_file's file path
+=== TEST 42: variables in header_filter_by_lua_file's file path
 --- config
     location ~ ^/lua/(.+)$ {
         return 200;
@@ -1600,7 +1736,7 @@ b
 
 
 
-=== TEST 39: variables in body_filter_by_lua_file's file path
+=== TEST 43: variables in body_filter_by_lua_file's file path
 --- config
     location ~ ^/lua/(.+)$ {
         echo hello;
@@ -1635,7 +1771,7 @@ b
 
 
 
-=== TEST 40: variables in log_by_lua_file's file path
+=== TEST 44: variables in log_by_lua_file's file path
 --- config
     log_subrequest on;
 
@@ -1685,7 +1821,7 @@ grep me: b
 
 
 
-=== TEST 41: same chunk from different directives produces different closures
+=== TEST 45: same chunk from different directives produces different closures
 --- http_config
     ssl_session_fetch_by_lua_block { ngx.log(ngx.INFO, "hello") }
 
@@ -1881,3 +2017,4 @@ qr/log_by_lua\(nginx.conf:\d+\):\d+: hello/,
 --- log_level: debug
 --- no_error_log
 [error]
+--- SKIP

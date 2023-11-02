@@ -71,6 +71,14 @@ static ngx_conf_post_t  ngx_http_lua_lowat_post =
 static volatile ngx_cycle_t  *ngx_http_lua_prev_cycle = NULL;
 
 
+static ngx_conf_enum_t  ngx_http_lua_code_cache[] = {
+    { ngx_string("off"), NGX_HTTP_LUA_CODE_CACHE_OFF },
+    { ngx_string("on"), NGX_HTTP_LUA_CODE_CACHE_ON },
+    { ngx_string("stat"), NGX_HTTP_LUA_CODE_CACHE_STAT },
+    { ngx_null_string, 0 }
+};
+
+
 #if (NGX_HTTP_SSL)
 
 static ngx_conf_bitmask_t  ngx_http_lua_ssl_protocols[] = {
@@ -183,10 +191,10 @@ static ngx_command_t ngx_http_lua_cmds[] = {
     { ngx_string("lua_code_cache"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
                         |NGX_CONF_FLAG,
-      ngx_http_lua_code_cache,
+      ngx_http_lua_set_code_cache,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_lua_loc_conf_t, enable_code_cache),
-      NULL },
+      offsetof(ngx_http_lua_loc_conf_t, code_cache),
+      &ngx_http_lua_code_cache },
 
     { ngx_string("lua_need_request_body"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
@@ -1404,7 +1412,7 @@ ngx_http_lua_create_loc_conf(ngx_conf_t *cf)
      */
 
     conf->force_read_body    = NGX_CONF_UNSET;
-    conf->enable_code_cache  = NGX_CONF_UNSET;
+    conf->code_cache         = NGX_CONF_UNSET;
     conf->http10_buffering   = NGX_CONF_UNSET;
     conf->check_client_abort = NGX_CONF_UNSET;
     conf->use_default_type   = NGX_CONF_UNSET;
@@ -1530,7 +1538,8 @@ ngx_http_lua_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 #endif
 
     ngx_conf_merge_value(conf->force_read_body, prev->force_read_body, 0);
-    ngx_conf_merge_value(conf->enable_code_cache, prev->enable_code_cache, 1);
+    ngx_conf_merge_value(conf->code_cache,
+                         prev->code_cache, NGX_HTTP_LUA_CODE_CACHE_ON);
     ngx_conf_merge_value(conf->http10_buffering, prev->http10_buffering, 1);
     ngx_conf_merge_value(conf->check_client_abort, prev->check_client_abort, 0);
     ngx_conf_merge_value(conf->use_default_type, prev->use_default_type, 1);

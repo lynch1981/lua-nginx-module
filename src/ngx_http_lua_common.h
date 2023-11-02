@@ -152,6 +152,11 @@ typedef struct {
 #define NGX_HTTP_LUA_FFI_BAD_CONTEXT        -101
 
 
+#define NGX_HTTP_LUA_CODE_CACHE_OFF          0
+#define NGX_HTTP_LUA_CODE_CACHE_ON           1
+#define NGX_HTTP_LUA_CODE_CACHE_STAT         2
+
+
 #if (NGX_PTR_SIZE >= 8 && !defined(_WIN64))
 #   define ngx_http_lua_lightudata_mask(ludata)                              \
         ((void *) ((uintptr_t) (&ngx_http_lua_##ludata) & ((1UL << 47) - 1)))
@@ -381,8 +386,7 @@ typedef struct {
     ngx_flag_t              force_read_body; /* whether force request body to
                                                 be read */
 
-    ngx_flag_t              enable_code_cache; /* whether to enable
-                                                  code cache */
+    ngx_int_t               code_cache; /* disable or enable or stat */
 
     ngx_flag_t              http10_buffering;
 
