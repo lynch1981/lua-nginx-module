@@ -370,7 +370,7 @@ qr/\[alert\] \S+ lua_code_cache is off; this will hurt performance/
 
 
 
-=== TEST 11: code cache explicitly stat (affects require) + content_by_lua_file
+=== TEST 11: code cache explicitly stat (do not affects require) + content_by_lua_file
 --- http_config eval
     "lua_package_path '$::HtmlDir/?.lua;./?.lua;;';"
 --- config
