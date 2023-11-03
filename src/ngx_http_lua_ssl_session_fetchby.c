@@ -42,7 +42,9 @@ ngx_http_lua_ssl_sess_fetch_handler_file(ngx_http_request_t *r,
     rc = ngx_http_lua_cache_loadfile(r->connection->log, L,
                                      lscf->srv.ssl_sess_fetch_src.data,
                                      &lscf->srv.ssl_sess_fetch_src_ref,
-                                     lscf->srv.ssl_sess_fetch_src_key);
+                                     lscf->srv.ssl_sess_fetch_src_key,
+                                     &lscf->srv.ssl_sess_fetch_src_mtime,
+                                     &lscf->srv.ssl_sess_fetch_src_size);
     if (rc != NGX_OK) {
         return rc;
     }
@@ -108,6 +110,7 @@ ngx_http_lua_ssl_sess_fetch_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
     u_char                      *name;
     ngx_str_t                   *value;
     ngx_http_lua_srv_conf_t     *lscf = conf;
+    ngx_file_info_t              fi;
 
     dd("enter");
 
@@ -142,6 +145,13 @@ ngx_http_lua_ssl_sess_fetch_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
         if (cache_key == NULL) {
             return NGX_CONF_ERROR;
         }
+
+        if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+            return NGX_CONF_ERROR;
+        }
+
+        lscf->srv.ssl_sess_fetch_src_mtime = ngx_file_mtime(&fi);
+        lscf->srv.ssl_sess_fetch_src_size = ngx_file_size(&fi);
 
         lscf->srv.ssl_sess_fetch_src.data = name;
         lscf->srv.ssl_sess_fetch_src.len = ngx_strlen(name);

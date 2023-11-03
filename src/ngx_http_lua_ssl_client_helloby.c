@@ -38,7 +38,9 @@ ngx_http_lua_ssl_client_hello_handler_file(ngx_http_request_t *r,
     rc = ngx_http_lua_cache_loadfile(r->connection->log, L,
                                      lscf->srv.ssl_client_hello_src.data,
                                      &lscf->srv.ssl_client_hello_src_ref,
-                                     lscf->srv.ssl_client_hello_src_key);
+                                     lscf->srv.ssl_client_hello_src_key,
+                                     &lscf->srv.ssl_client_hello_src_mtime,
+                                     &lscf->srv.ssl_client_hello_src_size);
     if (rc != NGX_OK) {
         return rc;
     }
@@ -145,6 +147,13 @@ ngx_http_lua_ssl_client_hello_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
         if (cache_key == NULL) {
             return NGX_CONF_ERROR;
         }
+
+        if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+            return NGX_CONF_ERROR;
+        }
+
+        lscf->srv.ssl_client_hello_src_mtime = ngx_file_mtime(&fi);
+        lscf->srv.ssl_client_hello_src_size = ngx_file_size(&fi);
 
         lscf->srv.ssl_client_hello_src.data = name;
         lscf->srv.ssl_client_hello_src.len = ngx_strlen(name);

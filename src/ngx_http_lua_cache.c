@@ -19,6 +19,8 @@
 #include "ngx_http_lua_util.h"
 
 
+static time_t last_code_cache_update = 0;
+
 static u_char *ngx_http_lua_gen_file_cache_key_helper(u_char *out,
     const u_char *src, size_t src_len);
 
@@ -198,6 +200,31 @@ ngx_http_lua_cache_store_code(lua_State *L, int *ref, const char *key)
 
 
 ngx_int_t
+ngx_http_lua_cache_unstore_code(lua_State *L, int *ref, const u_char *key)
+{
+    lua_pushlightuserdata(L, ngx_http_lua_lightudata_mask(
+                          code_cache_key));
+    lua_rawget(L, LUA_REGISTRYINDEX);
+
+    /* remove key in code cache table
+     * key can be a ref or a closure
+     * */
+    lua_pushnil(L);
+    lua_setfield(L, -2, (char *) key);
+
+    /* do nothing when ref is LUA_REFNIL or LUA_NOREF */
+    if (*ref != LUA_REFNIL && *ref != LUA_NOREF) {
+        luaL_unref(L, -1, *ref);
+        *ref = LUA_REFNIL;
+    }
+
+    lua_pop(L, 1);
+
+    return NGX_OK;
+}
+
+
+ngx_int_t
 ngx_http_lua_cache_loadbuffer(ngx_log_t *log, lua_State *L,
     const u_char *src, size_t src_len, int *cache_ref, const u_char *cache_key,
     const char *name)
@@ -260,12 +287,14 @@ error:
 
 ngx_int_t
 ngx_http_lua_cache_loadfile(ngx_log_t *log, lua_State *L,
-    const u_char *script, int *cache_ref, const u_char *cache_key)
+    const u_char *script, int *cache_ref, const u_char *cache_key,
+    time_t *src_mtime, off_t *src_size)
 {
     int              n;
     ngx_int_t        rc, errcode = NGX_ERROR;
     u_char           buf[NGX_HTTP_LUA_FILE_KEY_LEN + 1];
     const char      *err = NULL;
+    ngx_file_info_t  fi;
 
     n = lua_gettop(L);
 
@@ -281,6 +310,23 @@ ngx_http_lua_cache_loadfile(ngx_log_t *log, lua_State *L,
         dd("CACHE file key already pre-calculated");
 
         ngx_http_lua_assert(cache_ref != NULL && *cache_ref != LUA_NOREF);
+    }
+
+    if (ngx_time() != last_code_cache_update ) {
+        last_code_cache_update = ngx_time();
+
+        if (ngx_file_info(script, &fi) == NGX_FILE_ERROR) {
+            return NGX_ERROR;
+        }
+
+        if (ngx_file_mtime(&fi) != *src_mtime
+            || ngx_file_size(&fi) != *src_size)
+        {
+            *src_mtime = ngx_file_mtime(&fi);
+            *src_size = ngx_file_size(&fi);
+
+            rc = ngx_http_lua_cache_unstore_code(L, cache_ref, cache_key);
+        }
     }
 
     rc = ngx_http_lua_cache_load_code(log, L, cache_ref, (char *) cache_key);

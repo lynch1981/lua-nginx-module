@@ -181,7 +181,9 @@ ngx_http_lua_server_rewrite_handler_file(ngx_http_request_t *r,
     /*  load Lua script file (w/ cache)        sp = 1 */
     rc = ngx_http_lua_cache_loadfile(r->connection->log, L, script_path,
                                      &lscf->srv.server_rewrite_src_ref,
-                                     lscf->srv.server_rewrite_src_key);
+                                     lscf->srv.server_rewrite_src_key,
+                                     &lscf->srv.server_rewrite_src_mtime,
+                                     &lscf->srv.server_rewrite_src_size);
     if (rc != NGX_OK) {
         if (rc < NGX_HTTP_SPECIAL_RESPONSE) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;

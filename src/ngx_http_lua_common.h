@@ -29,6 +29,8 @@
 
 typedef struct {
     size_t       size;
+    time_t       src_mtime;
+    off_t        src_size;
     int          ref;
     u_char      *key;
     u_char      *chunkname;
@@ -340,12 +342,16 @@ union ngx_http_lua_srv_conf_u {
 
         ngx_http_lua_srv_conf_handler_pt     ssl_sess_fetch_handler;
         ngx_str_t                            ssl_sess_fetch_src;
+        time_t                               ssl_sess_fetch_src_mtime;
+        off_t                                ssl_sess_fetch_src_size;
         u_char                              *ssl_sess_fetch_src_key;
         u_char                              *ssl_sess_fetch_chunkname;
         int                                  ssl_sess_fetch_src_ref;
 
         ngx_http_lua_srv_conf_handler_pt     ssl_client_hello_handler;
         ngx_str_t                            ssl_client_hello_src;
+        time_t                               ssl_client_hello_src_mtime;
+        off_t                                ssl_client_hello_src_size;
         u_char                              *ssl_client_hello_src_key;
         u_char                              *ssl_client_hello_chunkname;
         int                                  ssl_client_hello_src_ref;
@@ -353,6 +359,8 @@ union ngx_http_lua_srv_conf_u {
 
         ngx_http_lua_srv_conf_handler_pt     server_rewrite_handler;
         ngx_http_complex_value_t             server_rewrite_src;
+        time_t                               server_rewrite_src_mtime;
+        off_t                                server_rewrite_src_size;
         u_char                              *server_rewrite_src_key;
         u_char                              *server_rewrite_chunkname;
         int                                  server_rewrite_src_ref;
@@ -361,6 +369,8 @@ union ngx_http_lua_srv_conf_u {
     struct {
         ngx_http_lua_srv_conf_handler_pt     handler;
         ngx_str_t                            src;
+        time_t                               src_mtime;
+        off_t                                src_size;
         u_char                              *src_key;
         u_char                              *chunkname;
         int                                  src_ref;
@@ -405,6 +415,8 @@ typedef struct {
                                                 inline script/script
                                                 file path */
 
+    time_t                   rewrite_src_mtime;
+    off_t                    rewrite_src_size;
     u_char                  *rewrite_src_key; /* cached key for rewrite_src */
     int                      rewrite_src_ref;
 
@@ -413,6 +425,8 @@ typedef struct {
                                                 inline script/script
                                                 file path */
 
+    time_t                   access_src_mtime;
+    off_t                    access_src_size;
     u_char                  *access_src_key; /* cached key for access_src */
     int                      access_src_ref;
 
@@ -421,6 +435,8 @@ typedef struct {
                                                 inline script/script
                                                 file path */
 
+    time_t                  content_src_mtime;
+    off_t                   content_src_size;
     u_char                 *content_src_key; /* cached key for content_src */
     int                     content_src_ref;
 
@@ -429,6 +445,8 @@ typedef struct {
     ngx_http_complex_value_t     log_src;     /* log_by_lua inline script/script
                                                  file path */
 
+    time_t                       log_src_mtime;
+    off_t                        log_src_size;
     u_char                      *log_src_key; /* cached key for log_src */
     int                          log_src_ref;
 
@@ -437,12 +455,18 @@ typedef struct {
                                                      file path */
 
     u_char                 *header_filter_chunkname;
+
+    time_t                  header_filter_src_mtime;
+    off_t                   header_filter_src_size;
     u_char                 *header_filter_src_key;
                                     /* cached key for header_filter_src */
     int                     header_filter_src_ref;
 
 
     ngx_http_complex_value_t         body_filter_src;
+
+    time_t                           body_filter_src_mtime;
+    off_t                            body_filter_src_size;
     u_char                          *body_filter_src_key;
     u_char                          *body_filter_chunkname;
     int                              body_filter_src_ref;

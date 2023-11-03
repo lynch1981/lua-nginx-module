@@ -474,7 +474,9 @@ ngx_http_lua_filter_set_by_lua_file(ngx_http_request_t *r, ngx_str_t *val,
     /*  load Lua script file (w/ cache)        sp = 1 */
     rc = ngx_http_lua_cache_loadfile(r->connection->log, L, script_path,
                                      &filter_data->ref,
-                                     filter_data->key);
+                                     filter_data->key,
+                                     &filter_data->src_mtime,
+                                     &filter_data->src_size);
     if (rc != NGX_OK) {
         return NGX_ERROR;
     }
@@ -516,6 +518,7 @@ ngx_http_lua_rewrite_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_str_t                   *value;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_loc_conf_t     *llcf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -576,6 +579,13 @@ ngx_http_lua_rewrite_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            llcf->rewrite_src_mtime = ngx_file_mtime(&fi);
+            llcf->rewrite_src_size = ngx_file_size(&fi);
         }
     }
 
@@ -618,6 +628,7 @@ ngx_http_lua_server_rewrite_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
     ngx_str_t                   *value;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_srv_conf_t     *lscf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -680,6 +691,13 @@ ngx_http_lua_server_rewrite_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            lscf->srv.server_rewrite_src_mtime = ngx_file_mtime(&fi);
+            lscf->srv.server_rewrite_src_size = ngx_file_size(&fi);
         }
     }
 
@@ -723,6 +741,7 @@ ngx_http_lua_access_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_str_t                   *value;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_loc_conf_t     *llcf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -783,6 +802,13 @@ ngx_http_lua_access_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            llcf->access_src_mtime = ngx_file_mtime(&fi);
+            llcf->access_src_size = ngx_file_size(&fi);
         }
     }
 
@@ -826,6 +852,7 @@ ngx_http_lua_content_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_core_loc_conf_t    *clcf;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_loc_conf_t     *llcf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -888,6 +915,13 @@ ngx_http_lua_content_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            llcf->content_src_mtime = ngx_file_mtime(&fi);
+            llcf->content_src_size = ngx_file_size(&fi);
         }
     }
 
@@ -937,6 +971,7 @@ ngx_http_lua_log_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_str_t                   *value;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_loc_conf_t     *llcf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -997,6 +1032,13 @@ ngx_http_lua_log_by_lua(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            llcf->log_src_mtime = ngx_file_mtime(&fi);
+            llcf->log_src_size = ngx_file_size(&fi);
         }
     }
 
@@ -1039,6 +1081,7 @@ ngx_http_lua_header_filter_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
     ngx_str_t                   *value;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_loc_conf_t     *llcf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -1097,6 +1140,13 @@ ngx_http_lua_header_filter_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            llcf->header_filter_src_mtime = ngx_file_mtime(&fi);
+            llcf->header_filter_src_size = ngx_file_size(&fi);
         }
     }
 
@@ -1139,6 +1189,7 @@ ngx_http_lua_body_filter_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
     ngx_str_t                   *value;
     ngx_http_lua_main_conf_t    *lmcf;
     ngx_http_lua_loc_conf_t     *llcf = conf;
+    ngx_file_info_t              fi;
 
     ngx_http_compile_complex_value_t         ccv;
 
@@ -1198,6 +1249,13 @@ ngx_http_lua_body_filter_by_lua(ngx_conf_t *cf, ngx_command_t *cmd,
             if (cache_key == NULL) {
                 return NGX_CONF_ERROR;
             }
+
+            if (ngx_file_info(value[1].data, &fi) == NGX_FILE_ERROR) {
+                return NGX_CONF_ERROR;
+            }
+
+            llcf->body_filter_src_mtime = ngx_file_mtime(&fi);
+            llcf->body_filter_src_size = ngx_file_size(&fi);
         }
     }
 
