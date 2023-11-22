@@ -416,9 +416,8 @@ ngx_http_lua_new_thread(ngx_http_request_t *r, lua_State *L, int *ref)
 
         *ref = luaL_ref(L, -2);
 
-        ngx_log_debug2(NGX_LOG_DEBUG_HTTP,
-                       ngx_cycle->log, 0, "lua ref lua thread %p (ref %d)", co,
-                       *ref);
+        ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                       "lua ref lua thread %p (ref %d)", co, *ref);
 
         if (*ref == LUA_NOREF) {
             lua_settop(L, base);  /* restore main thread stack */
